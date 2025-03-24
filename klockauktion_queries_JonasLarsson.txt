@@ -1,0 +1,147 @@
+User Stories för Klockauktion
+
+
+--Som användare vill jag kunna se alla auktioner som har ett utgångspris.
+
+SELECT auktion.id, start_bud AS utgångsbud, märke, modell, starttid, sluttid FROM auktion
+JOIN klockauktion.klocka k on auktion.klocka_id = k.id
+WHERE start_bud IS NOT NULL
+ORDER BY start_bud
+--------------------------------------------------------------------------------
+
+--som användare vill jag kunna se budhistorik för en auktion
+SELECT auktion.id AS auktions_id, namn, nickname, bud, datum_för_bud, märke, modell FROM auktion
+JOIN klockauktion.budgivning b on auktion.id = b.auktion_id
+JOIN klockauktion.konto k on b.budgivare_id = k.id
+JOIN klockauktion.personuppgifter p on k.personuppgifter_id = p.id
+JOIN klockauktion.klocka k2 on auktion.klocka_id = k2.id
+WHERE auktion.id = 3
+ORDER BY datum_för_bud
+
+--------------------------------------------------------------------------------
+
+--som användare vill jag kunna se det vinnande budet och vem som vann auktionen
+SELECT auktion.id AS auktions_id, nickname, bud, datum_för_bud FROM auktion
+JOIN klockauktion.budgivning b on auktion.id = b.auktion_id
+JOIN klockauktion.konto k on b.budgivare_id = k.id
+WHERE sluttid between '1995-01-12' AND '2024-10-08'--filtrerar perioden man vill se
+AND auktion_id = 8 --välj vilken auktion
+ORDER BY bud DESC
+LIMIT 1
+-------------------------------------------------------------------------------
+
+--som användare Jonas "tigern" vill jag kunna se mina egna bud
+SELECT auktion.id AS auktions_id, nickname, namn, bud, datum_för_bud, märke, modell FROM auktion
+JOIN klockauktion.budgivning b on auktion.id = b.auktion_id
+JOIN klockauktion.konto k on b.budgivare_id = k.id
+JOIN klockauktion.personuppgifter p on k.personuppgifter_id = p.id
+JOIN klockauktion.klocka k2 on auktion.klocka_id = k2.id
+WHERE nickname = 'tigern' AND b.auktion_id = 9 --välj vilken auktion
+ORDER BY bud
+------------------------------------------------------------------------------
+--Som användare Anna "hajen" vill jag kunna se mina auktioner
+SELECT konto.nickname, säljare_id, a.id AS auktions_id, märke, modell FROM konto
+JOIN klockauktion.auktion a on konto.id = a.säljare_id
+JOIN klockauktion.klocka k on k.id = a.klocka_id
+WHERE nickname = 'hajen'
+-------------------------------------------------------------------------------
+--som admin vill jag kunna se en lista och info om alla användare (som inte är admin)
+SELECT namn, efternamn, email, admin, nickname, profilbild, telefonnummer FROM konto
+JOIN klockauktion.email e on konto.email_id = e.id
+JOIN klockauktion.telefon t on e.personuppgifter_id = t.personuppgifter_id
+JOIN klockauktion.personuppgifter p on p.id = konto.personuppgifter_id
+WHERE admin = false
+------------------------------------------------------------------------------
+--Som användare Roffe vill jag kunna se historik för min auktion.
+SELECT a.id, säljare_id, starttid, sluttid, nickname, namn, bud AS bud_i_kr, datum_för_bud, märke, modell FROM konto
+JOIN klockauktion.personuppgifter p on p.id = konto.personuppgifter_id
+JOIN klockauktion.budgivning b on konto.id = b.budgivare_id
+JOIN klockauktion.auktion a on b.auktion_id = a.id
+JOIN klockauktion.klocka k on k.id = a.klocka_id
+WHERE säljare_id = 10
+
+----------------------------------------------------------------
+--som admin vill jag kunna se en lista och info om alla användare som är admin.
+SELECT namn, efternamn, email, admin, nickname, profilbild, telefonnummer FROM konto
+JOIN klockauktion.email e on konto.email_id = e.id
+JOIN klockauktion.telefon t on e.personuppgifter_id = t.personuppgifter_id
+JOIN klockauktion.personuppgifter p on p.id = konto.personuppgifter_id
+WHERE admin = true;
+----------------------------------------------------------------------------
+
+--som användare vill jag kunna se listor på auktioner som är aktiva
+SELECT auktion.id AS auktions_id, starttid, sluttid, märke, modell, start_bud FROM auktion
+JOIN klockauktion.klocka k on auktion.klocka_id = k.id
+WHERE starttid < '2024-10-08' AND sluttid > '2024-10-08'
+----------------------------------------------------------------------------
+
+
+--som användare vill jag kunna se listor på auktioner som är avslutade
+SELECT auktion.id AS auktions_id, sluttid, märke, modell, start_bud, Max(bud) AS vinnande_bud FROM auktion
+JOIN klockauktion.klocka k on auktion.klocka_id = k.id
+JOIN klockauktion.budgivning b on auktion.id = b.auktion_id
+WHERE  sluttid < '2024-10-08'
+GROUP BY auktion.id, sluttid, märke, modell, start_bud
+----------------------------------------------------------------------------
+
+--Som användare vill jag kunna se auktioner som snart går ut och aktuellt bud
+SELECT auktion.id AS auktions_id, sluttid, märke, modell , MAX(bud) AS högsta_bud_i_kr FROM auktion
+JOIN klockauktion.klocka k on auktion.klocka_id = k.id
+JOIN klockauktion.budgivning b on auktion.id = b.auktion_id
+WHERE sluttid BETWEEN '2024-10-23' AND '2024-10-31'
+GROUP BY auktion.id, sluttid, märke, modell
+
+-----------------------------------------------------------------------
+
+--som användare vill jag kunna se nya auktioner
+SELECT auktion.id AS auktions_id, starttid, märke, modell, start_bud FROM auktion
+JOIN klockauktion.klocka k on auktion.klocka_id = k.id
+WHERE starttid  >= '2024-10-08'
+------------------------------------------------------------------------
+
+--Användare måste kunna se budhistorik per auktion, såväl som aktuellt bud
+SELECT a.id AS auktions_nummer, nickname, bud, datum_för_bud, märke, modell FROM budgivning
+JOIN klockauktion.auktion a on budgivning.auktion_id = a.id
+JOIN klockauktion.klocka k on k.id = a.klocka_id
+JOIN klockauktion.konto k2 on budgivning.budgivare_id = k2.id
+WHERE a.id = 9
+ORDER BY bud DESC
+---------------------------------------------------------------------------
+
+--Tjänsten ska ha en tydlig beskrivning på varje auktionsobjekt
+SELECT märke, modell, diameter, färg, urverk, armband, bild, beskrivning FROM klocka
+JOIN klockauktion.bilder b on klocka.id = b.klocka_id
+ORDER BY märke
+
+---------------------------------------------------------------------------
+
+--som användare/admin vill jag kunna se alla auktioner som en lista.
+SELECT auktion.id, auktion.starttid, auktion.sluttid, märke, modell, auktion.start_bud FROM auktion
+JOIN klockauktion.klocka k on auktion.klocka_id = k.id
+ORDER BY starttid
+----------------------------------------------------------------------------
+--som Admin vill jag kunna ta bort en auktion som inte följer sidans regler
+DELETE auktion WHERE auktion_id =x
+
+---------------------------------------------------------------------------
+ --som användare (jonas "tigern" svensson, konto_id 7) vill jag kunna lägga bud
+INSERT INTO budgivning (id, bud, auktion_id, budgivare_id, datum_för_bud) VALUES
+('69', '80000', '7', '8', '2024-11-05')
+ -----------------------------------------------------------------------
+--Jag som säljare Anna "hajen" (sälj_id 3) behöver uppdatera  mitt startbud på auktion 2.
+UPDATE auktion SET start_bud = 200
+WHERE auktion.id = 2
+AND säljare_id = 3;
+
+------------------------------------------------------------------------------
+
+--Som användare (anna 'hajen') vill jag kunna logga in
+SELECT nickname,password,email_id, email,
+CASE
+WHEN 'gegrhtryhrwg' = password
+AND 'kungen@outlook.com' = email
+THEN 'Lyckad inloggning'
+ELSE 'Fel email eller password' END
+FROM konto
+join klockauktion.email e on e.id = konto.email_id
+WHERE email_id = 9;
